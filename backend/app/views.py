@@ -114,12 +114,25 @@ class MFASetupView(APIView):
             # Store in cache: "mfa_email_<user_id>" -> code
             cache.set(f"mfa_email_{user.id}", code, timeout=300)
             
-            # TODO: Send email
-            print(f"DEBUG: Email OTP for {user.email}: {code}")
+            # Send email
+            from django.core.mail import send_mail
+            try:
+                send_mail(
+                    subject=f'Your {settings.MFA_ISSUER_NAME} Verification Code',
+                    message=f'Your verification code is: {code}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                print(f"DEBUG: Email sent to {user.email}")
+            except Exception as e:
+                print(f"ERROR: Failed to send email to {user.email}: {e}")
+                # Fallback print for development if email fails
+                print(f"DEBUG: Email OTP for {user.email}: {code}")
             
             return Response({
                 'method': 'EMAIL',
-                'message': 'Code sent to email (Check console for DEBUG)'
+                'message': f'Code sent to {user.email}'
             })
 
         return Response({'error': 'Invalid method'}, status=400)
